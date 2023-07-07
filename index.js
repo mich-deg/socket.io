@@ -1,32 +1,37 @@
 const express = require("express");
-const path = require("path");
 const { Server } = require("socket.io");
-
-const app = express();
-const http = require("http");
-const server = http.createServer(app);
-
-const io = new Server(server);
+const cors = require("cors");
 
 const PORT = 3000 || process.env.PORT;
 
-// Static Middleware
-app.use(express.static(path.join(__dirname, "public")));
+const app = express();
 
-app.get("/", (req, res) => {
-  res.send("index.html");
+app.use(cors());
+
+const http = require("http");
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"],
+  },
 });
 
 io.on("connection", (socket) => {
-  console.log("a user connected");
-  socket.on("chat message", (msg) => {
-    console.log("message: " + msg);
+  console.log(`User connected: ${socket.id}`);
+
+  socket.on("join_room", (data) => {
+    socket.join(data);
+    console.log(`User with ID: ${socket.id} joined room: ${data}`);
   });
-  socket.on("chat message", (msg) => {
-    io.emit("chat message", msg);
+
+  socket.on("send_msg", (data) => {
+    socket.to(data.room).emit("receive_msg", data);
   });
+
   socket.on("disconnect", () => {
-    console.log("user disconnected");
+    console.log(`User disconnected: ${socket.id}`);
   });
 });
 
